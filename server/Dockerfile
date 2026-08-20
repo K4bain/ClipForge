@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir uv==0.5.18
 
 RUN git clone --depth 1 https://github.com/K4bain/ClipForge.git /tmp/clipforge \
+    && mkdir -p /opt/clipforge \
     && mv /tmp/clipforge/pipeline /opt/clipforge/pipeline \
     && rm -rf /tmp/clipforge
 
