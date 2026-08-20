@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClipForge — forge clips from the full story</title>
+<style>
+  :root {
+    --ink: #090b10;
+    --panel: #10131b;
+    --line: #1d2230;
+    --text: #e7e9ee;
+    --dim: #8a91a3;
+    --ember: #ff6a2c;
+    --ember-dim: #b34a20;
+    --ok: #34d399;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ink); color: var(--text);
+    font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .forge-line {
+    height: 3px; width: 100%;
+    background: linear-gradient(90deg, transparent, var(--ember) 30%, var(--ember-dim) 70%, transparent);
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { margin-bottom: 36px; }
+  .mark { display: flex; align-items: center; gap: 14px; }
+  .mark svg { width: 40px; height: 40px; }
+  .mark h1 { font-size: 26px; letter-spacing: .04em; margin: 0; font-weight: 600; }
+  .tagline { color: var(--dim); font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; margin: 6px 0 0 54px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+    padding: 20px; margin-bottom: 20px;
+  }
+  label { display: block; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; margin: 14px 0 6px; }
+  input[type=url], select {
+    width: 100%; background: var(--ink); color: var(--text);
+    border: 1px solid var(--line); border-radius: 3px; padding: 10px 12px;
+    font-family: "JetBrains Mono", Consolas, monospace; font-size: 13px;
+  }
+  input:focus, select:focus { outline: 1px solid var(--ember); }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  button {
+    margin-top: 18px; background: linear-gradient(135deg, var(--ember), var(--ember-dim));
+    color: #0c0a08; border: 0; border-radius: 3px; padding: 11px 22px;
+    font-weight: 600; letter-spacing: .05em; cursor: pointer;
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 12px; line-height: 1.6; }
+  .job { border: 1px solid var(--line); border-radius: 3px; padding: 14px 16px; margin-bottom: 12px; }
+  .job-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .job-id { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; color: var(--ember); }
+  .job-src { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 420px; }
+  .status { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; padding: 3px 8px; border-radius: 2px; border: 1px solid var(--line); color: var(--dim); }
+  .status.running { color: var(--ember); border-color: var(--ember-dim); }
+  .status.done { color: var(--ok); border-color: var(--ok); }
+  .status.failed, .status.cancelled { color: var(--bad); border-color: var(--bad); }
+  .bar { height: 5px; background: var(--ink); border-radius: 2px; margin: 12px 0 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: linear-gradient(90deg, var(--ember), var(--ember-dim)); transition: width .5s; }
+  .stage { font-family: "JetBrains Mono", Consolas, monospace; font-size: 11px; color: var(--dim); }
+  .clips { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .clip { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+  .clip a { color: var(--ok); text-decoration: none; border: 1px solid var(--line); padding: 4px 10px; border-radius: 2px; }
+  .clip a:hover { border-color: var(--ok); }
+  .error { color: var(--bad); font-size: 12px; margin-top: 8px; font-family: "JetBrains Mono", Consolas, monospace; }
+  .empty { color: var(--dim); font-size: 13px; padding: 30px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="forge-line"></div>
+<div class="wrap">
+  <header>
+    <div class="mark">
+      <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path d="M20 4 34 13v14L20 36 6 27V13L20 4Z" stroke="#ff6a2c" stroke-width="2" fill="none"/>
+        <path d="M16 15v10l9-5-9-5Z" fill="#ff6a2c"/>
+      </svg>
+      <h1>CLIPFORGE</h1>
+    </div>
+    <p class="tagline">long video in → forged clips out · every score auditable</p>
+  </header>
+
+  <div class="card">
+    <form id="form">
+      <label for="source">YouTube URL or direct video link</label>
+      <input id="source" type="url" required placeholder="https://www.youtube.com/watch?v=…">
+      <div class="row">
+        <div>
+          <label for="llm">Scoring brain</label>
+          <select id="llm">
+            <option value="ollama" selected>Ollama (local, free)</option>
+            <option value="gemini">Gemini (your key)</option>
+          </select>
+        </div>
+        <div>
+          <label for="captions">Caption preset</label>
+          <select id="captions">
+            <option value="classic" selected>classic</option>
+            <option value="minimal">minimal</option>
+            <option value="kinetic">kinetic</option>
+          </select>
+        </div>
+        <div>
+          <label for="camera">Camera</label>
+          <select id="camera">
+            <option value="cut" selected>cut on speaker change</option>
+            <option value="pan">eased pan</option>
+            <option value="locked">locked on face</option>
+          </select>
+        </div>
+      </div>
+      <button id="go" type="submit">FORGE CLIPS</button>
+      <p class="hint">
+        CPU worker (2 vCPU / 16 GB). An hour of video ≈ 20–40 min of processing.
+        The very first job also downloads ~5 GB of models + a scoring model —
+        expect a long wait that one time. One or two jobs run at a time; extra
+        submissions are queued.
+      </p>
+    </form>
+  </div>
+
+  <div id="jobs"><div class="empty">no jobs yet</div></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function chip(status) {
+  const cls = ["done", "failed", "cancelled"].includes(status) || status === "running" ? status : "";
+  return `<span class="status ${cls}">${esc(status)}</span>`;
+}
+
+function render(jobs) {
+  const box = $("jobs");
+  if (!jobs.length) { box.innerHTML = '<div class="empty">no jobs yet</div>'; return; }
+  box.innerHTML = jobs.map((j) => {
+    const p = j.progress || {};
+    const pct = p.fraction != null && p.fraction >= 0 ? Math.round(p.fraction * 100) : 0;
+    const pctW = p.fraction != null && p.fraction >= 0 ? Math.min(100, pct) : 0;
+    const stage = p.stage ? `${esc(p.stage)} — ${esc(p.message || "")}` : esc(p.message || "starting…");
+    const clips = (j.clips || []).map((c) =>
+      `<div class="clip"><span>clip_${String(c.index).padStart(2, "0")}.mp4</span>` +
+      `<a href="/api/jobs/${j.job_id}/clips/${c.index}/file" download>download</a></div>`).join("");
+    const err = j.error ? `<div class="error">${esc(j.error)}</div>` : "";
+    return `<div class="job">
+      <div class="job-top">
+        <span class="job-id">${j.job_id}</span>
+        <span class="job-src" title="${esc(j.source || "")}">${esc(j.source || "")}</span>
+        ${chip(j.status)}
+      </div>
+      <div class="bar"><div style="width:${pctW}%"></div></div>
+      <div class="stage">${stage}${j.status === "done" ? ` · ${j.clips || 0} clip(s)` : ""}</div>
+      ${err}
+      ${clips ? `<div class="clips">${clips}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+async function refresh() {
+  try {
+    const res = await fetch("/api/jobs");
+    const data = await res.json();
+    render(data.jobs || []);
+  } catch { /* offline — retry next tick */ }
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const go = $("go");
+  go.disabled = true; go.textContent = "SUBMITTING…";
+  const body = {
+    source: $("source").value.trim(),
+    llm: $("llm").value,
+    captions: $("captions").value,
+    camera: $("camera").value,
+  };
+  try {
+    const res = await fetch("/api/jobs", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || "submission failed");
+    } else {
+      $("source").value = "";
+    }
+  } finally {
+    go.disabled = false; go.textContent = "FORGE CLIPS";
+  }
+  refresh();
+});
+
+refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>
