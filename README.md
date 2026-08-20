@@ -35,6 +35,22 @@ validated on every push by the `windows` workflow: env resolve, full test
 suite, NSIS build, silent install, and a launch of the installed app on a
 clean VM.
 
+## Demo API
+
+A public showcase of the auditable score lives at
+`https://clipforge-production-1c78.up.railway.app` (source in `web/`):
+
+- `GET /health` — liveness
+- `POST /audit` — paste a short transcript (+ optional `laughs`, `energy`,
+  `speaker_changes`) and get back subscores, adjustments and the full audit
+  trail, exactly like the desktop app's review screen
+
+```sh
+curl -s -X POST https://clipforge-production-1c78.up.railway.app/audit \
+  -H "Content-Type: application/json" \
+  -d '{"transcript":"...","laughs":3,"energy":0.8}'
+```
+
 ## Layout
 
 ```
