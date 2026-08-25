@@ -36,6 +36,15 @@ class YtDlpError(Exception):
     """yt-dlp process failure with a cleaned, user-facing message."""
 
 
+def _cookie_args() -> list[str]:
+    """CLIPFORGE_YTDLP_COOKIES → yt-dlp --cookies. Servers on datacenter
+    IPs need a logged-in browser's cookies to pass YouTube's bot check."""
+    path = os.environ.get("CLIPFORGE_YTDLP_COOKIES")
+    if path and Path(path).exists():
+        return ["--cookies", path]
+    return []
+
+
 def _binary_name() -> str:
     system = platform.system()
     if system == "Windows":
@@ -202,7 +211,7 @@ def fetch_meta(url: str, progress: ProgressFn) -> UrlMeta:
     bin_path = ensure_ytdlp(progress)
 
     def _go() -> str:
-        return _run(bin_path, ["-J", "--no-playlist", "--no-warnings", url])
+        return _run(bin_path, ["-J", "--no-playlist", "--no-warnings", *_cookie_args(), url])
 
     out = _with_self_update_retry(bin_path, progress, _go)
     data = json.loads(out)
@@ -254,7 +263,7 @@ def download(url: str, out_path: Path, progress: ProgressFn) -> None:
     ]
     if ffmpeg:
         args += ["--ffmpeg-location", ffmpeg]
-    args += ["-o", str(out_path), url]
+    args += [*_cookie_args(), "-o", str(out_path), url]
 
     def _on_line(line: str) -> None:
         m = _PCT_RE.search(line)

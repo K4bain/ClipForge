@@ -84,6 +84,17 @@
     <p class="tagline">long video in → forged clips out · every score auditable</p>
   </header>
 
+  <div class="card" id="cookieCard">
+    <label style="margin-top:0">YouTube cookies <span id="cookieState" style="text-transform:none;letter-spacing:0"></span></label>
+    <p class="hint" style="margin-top:4px">
+      Cloud servers get bot-checked by YouTube. Export cookies.txt from a
+      logged-in youtube.com tab (browser extension "Get cookies.txt LOCALLY")
+      and upload it here — once. Direct video links work without this.
+    </p>
+    <input type="file" id="cookieFile" accept=".txt" style="margin-top:8px">
+    <button type="button" id="cookieBtn" style="padding:8px 14px;margin-top:10px">UPLOAD COOKIES</button>
+  </div>
+
   <div class="card">
     <form id="form">
       <label for="source">YouTube URL or direct video link</label>
@@ -195,7 +206,31 @@ $("form").addEventListener("submit", async (e) => {
   refresh();
 });
 
+async function cookieStatus() {
+  try {
+    const res = await fetch("/api/cookies");
+    const data = await res.json();
+    $("cookieState").textContent = data.present ? "— uploaded ✓" : "— not set";
+    $("cookieState").style.color = data.present ? "var(--ok)" : "var(--dim)";
+  } catch { /* ignore */ }
+}
+
+$("cookieBtn").addEventListener("click", async () => {
+  const f = $("cookieFile").files[0];
+  if (!f) { alert("Choose a cookies.txt file first"); return; }
+  const text = await f.text();
+  const res = await fetch("/api/cookies", { method: "POST", headers: { "Content-Type": "text/plain" }, body: text });
+  if (res.ok) {
+    $("cookieFile").value = "";
+    cookieStatus();
+  } else {
+    const err = await res.json().catch(() => ({}));
+    alert(err.detail || "upload failed");
+  }
+});
+
 refresh();
+cookieStatus();
 setInterval(refresh, 2500);
 </script>
 </body>

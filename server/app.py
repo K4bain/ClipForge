@@ -17,7 +17,7 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -133,6 +133,10 @@ def _job_listing(job_id: str) -> dict:
     }
 
 
+def _cookies_path() -> Path:
+    return SERVER_HOME / "youtube-cookies.txt"
+
+
 def _spawn(job_id: str, source: str, llm: str, captions: str | None, camera: str | None) -> None:
     cmd = [
         os.environ.get("CLIPFORGE_BIN", "clipforge"), "--jsonl", "run", source,
@@ -146,6 +150,8 @@ def _spawn(job_id: str, source: str, llm: str, captions: str | None, camera: str
     env = dict(os.environ)
     env["CLIPFORGE_HOME"] = os.environ.get("CLIPFORGE_HOME", str(Path.home() / ".clipforge"))
     env["HF_HOME"] = os.environ.get("HF_HOME", str(Path(env["CLIPFORGE_HOME"]) / "models" / "hf"))
+    if _cookies_path().exists():
+        env["CLIPFORGE_YTDLP_COOKIES"] = str(_cookies_path())
 
     def run() -> None:
         global _running
@@ -204,6 +210,27 @@ def root():
 @app.get("/health")
 def health():
     return {"ok": True, "running": _running, "queued": sum(1 for p in JOBS_META.glob("*.json") if _load_meta(p.stem).get("status") == "queued")}
+
+
+@app.get("/api/cookies")
+def cookies_status():
+    return {"present": _cookies_path().exists()}
+
+
+@app.post("/api/cookies")
+async def cookies_upload(request: Request):
+    body = (await request.body()).decode("utf-8", errors="replace")
+    if "# Netscape HTTP Cookie File" not in body and ".youtube.com" not in body:
+        raise HTTPException(422, "That does not look like a cookies.txt export (Netscape format).")
+    SERVER_HOME.mkdir(parents=True, exist_ok=True)
+    _cookies_path().write_text(body)
+    return {"ok": True, "bytes": len(body)}
+
+
+@app.delete("/api/cookies")
+def cookies_delete():
+    _cookies_path().unlink(missing_ok=True)
+    return {"ok": True}
 
 
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")

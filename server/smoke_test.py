@@ -120,6 +120,20 @@ def main() -> int:
     r = client.get("/ui")
     check("ui served", r.status_code == 200 and "CLIPFORGE" in r.text)
 
+    r = client.get("/api/cookies")
+    check("cookies empty initially", r.status_code == 200 and r.json()["present"] is False)
+
+    r = client.post("/api/cookies", content="garbage", headers={"Content-Type": "text/plain"})
+    check("cookies reject non-netscape", r.status_code == 422)
+
+    netscape = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tVISITOR_INFO1_LIVE\tabc\n"
+    r = client.post("/api/cookies", content=netscape, headers={"Content-Type": "text/plain"})
+    check("cookies accept netscape", r.status_code == 200 and r.json()["ok"] is True)
+    check("cookies file written", server_app._cookies_path().exists())
+
+    r = client.delete("/api/cookies")
+    check("cookies delete", r.status_code == 200 and not server_app._cookies_path().exists())
+
     print("FAILURES:", FAIL)
     return 1 if FAIL else 0
 
