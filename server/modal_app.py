@@ -20,7 +20,7 @@ SERVER_DIR = Path(__file__).parent
 def _repo_rev() -> str:
     try:
         rev = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "rev-parse", "HEAD"],
             capture_output=True, text=True, cwd=str(SERVER_DIR.parent),
         ).stdout.strip()
         return rev or "main"
